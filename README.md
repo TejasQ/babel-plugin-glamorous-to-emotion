@@ -20,6 +20,7 @@ You'll need to use [`babel-codemod`](https://github.com/square/babel-codemod) to
 This will put you fully in emotion-land.
 
 ## Contributing
+### ALL CONTRIBUTIONS WELCOME!
 I sincerely hope it helps you migrate your codebase! Please open issues for areas where it doesn't quite help and we'll sort it out.
 
 ## Acknowledgements
