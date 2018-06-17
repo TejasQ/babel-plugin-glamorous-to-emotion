@@ -1,4 +1,4 @@
-# 💄 ➡️👩‍🎤
+# 💄 glamorous  → 👩‍🎤 emotion
 This codemod was created to help migrate an existing React or Preact codebase from [glamorous](https://github.com/paypal/glamorous) to [emotion](https://github.com/emotion-js/emotion) in light of [this issue](https://github.com/paypal/glamorous/issues/419) on glamorous.
 
 [Here's a demo](https://astexplorer.net/#/gist/7bc4771564a12c9f93c4904b3934aa1c/latest) of the codemod in action. The upper-left quadrant is glamorous code, the lower-right quadrant is the transformed code.
@@ -22,10 +22,10 @@ This will put you fully in emotion-land.
 ## Contributing
 I sincerely hope it helps you migrate your codebase! Please open issues for areas where it doesn't quite help and we'll sort it out.
 
-## Thank Yous
+## Acknowledgements
 The following people are awesome for their open source work and should be acknowledged as such.
 
-- @tkh44 for writing emotion.
-- @kentcdodds for writing glamorous.
-- @cbhoweth, @coldpour, @mitchellhamilton, @roystons for writing the migration guide.
-- @jamiebuilds for an incredible [Babel handbook](https://github.com/jamiebuilds/babel-handbook/blob/master/README.md).
+- [@tkh44](https://github.com/tkh44) for writing emotion.
+- [@kentcdodds](https://github.com/kentcdodds) for writing glamorous.
+- [@cbhoweth](https://github.com/cbhoweth), [@coldpour](https://github.com/coldpour), [@mitchellhamilton](https://github.com/mitchellhamilton), [@roystons](https://github.com/roystons) for writing the migration guide.
+- [@jamiebuilds](https://github.com/jamiebuilds) for an incredible [Babel handbook](https://github.com/jamiebuilds/babel-handbook/blob/master/README.md).
