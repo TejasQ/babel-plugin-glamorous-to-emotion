@@ -141,7 +141,7 @@ module.exports = function(babel) {
         let newImports = [];
         let useDefaultImport = false;
 
-        getNewName = () => {
+        const getNewName = () => {
           if (!useDefaultImport) {
             newImports.push(
               t.importDeclaration(
