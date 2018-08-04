@@ -21,44 +21,43 @@
 module.exports = function(babel) {
   const {types: t} = babel;
 
-  const fixContentProp = args => {
-    return args.map(argument => {
-      if (argument.type !== "ObjectExpression") {
-        return argument;
+  // glamorous and emotion treat the css attribute "content" differently.
+  // we need to put it's content inside a string.
+  // i.e. turn {content: ""} into {content: '""'}
+  const fixContentProp = glamorousFactoryArguments => {
+    return glamorousFactoryArguments.map(arg => {
+      if (t.isObjectExpression(arg)) {
+        arg.properties = arg.properties.map(
+          prop =>
+            prop.key.name === "content"
+              ? {...prop, value: t.stringLiteral(`"${prop.value.value}"`)}
+              : prop
+        );
       }
-      return {
-        ...argument,
-        properties: argument.properties.map(prop => {
-          if (prop.key.name !== "content") {
-            return prop;
-          }
-
-          // Add quotes to the content property.
-          return {
-            ...prop,
-            value: t.stringLiteral(`"${prop.value.value}"`),
-          };
-        }),
-      };
+      // TODO: if `arg` is a function, we might want to inspect its return value
+      return arg;
     });
   };
 
-  const transformJSXAttributes = attrs => {
-    if (!attrs) return [];
+  const transformJSXAttributes = jsxAttrs => {
+    if (!jsxAttrs) return [];
     const appendToCss = [];
     let cssAttr = null;
-    const newAttrs = attrs.filter(attr => {
-      const {value, name, type} = attr;
-      if (type === "JSXSpreadAttribute") return true;
-      if (name.name === "css") {
+    const newAttrs = jsxAttrs.filter(attr => {
+      if (t.isJSXSpreadAttribute(attr)) return true;
+      const {value, name: jsxKey} = attr;
+      if (jsxKey.name === "css") {
         cssAttr = attr;
       } else {
+        // TODO: be smarter about finding out which properties
+        // are CSS properties and which ones are not
+
         // event handlers are no CSS Props!
-        if (name.name.indexOf("on") === 0) return true;
+        if (jsxKey.name.indexOf("on") === 0) return true;
 
         appendToCss.push({
-          name: t.identifier(name.name),
-          value: value.type === "JSXExpressionContainer" ? value.expression : value,
+          name: t.identifier(jsxKey.name),
+          value: t.isJSXExpressionContainer(value) ? value.expression : value,
         });
         return false;
       }
@@ -71,8 +70,9 @@ module.exports = function(babel) {
           t.jsxExpressionContainer(t.objectExpression([]))
         );
         newAttrs.push(cssAttr);
-      } else if (cssAttr.value.expression.type !== "ObjectExpression") {
+      } else if (!t.isObjectExpression(cssAttr.value.expression)) {
         // turn <span css={obj} .../> into <span css={{...obj}} .../>
+        // so we can add more properties to this css attribute
         cssAttr.value.expression = t.objectExpression([t.spreadElement(cssAttr.value.expression)]);
       }
       appendToCss.forEach(({name, value}) => {
@@ -93,7 +93,7 @@ module.exports = function(babel) {
         }
         case "MemberExpression": {
           const grandParentPath = path.parentPath.parentPath;
-          if (grandParentPath.node.type === "CallExpression") {
+          if (t.isCallExpression(grandParentPath.node)) {
             grandParentPath.replaceWith(
               t.callExpression(
                 t.callExpression(t.identifier(getNewName()), [
@@ -112,13 +112,13 @@ module.exports = function(babel) {
         case "JSXMemberExpression": {
           const grandParent = path.parentPath.parent;
           grandParent.name = t.identifier(grandParent.name.property.name.toLowerCase());
-          if (grandParent.type === "JSXOpeningElement") {
+          if (t.isJSXOpeningElement(grandParent)) {
             grandParent.attributes = transformJSXAttributes(grandParent.attributes);
           }
           break;
         }
         default: {
-          console.log("default", path.parent.type);
+          console.warning("Found glamorous being used in an unkonwn context:", path.parent.type);
         }
       }
     },
@@ -128,19 +128,20 @@ module.exports = function(babel) {
     name: "glamorousToEmotion",
     visitor: {
       ImportDeclaration(path, {opts}) {
-        if (
-          path.node.source.value !== "glamorous" &&
-          path.node.source.value !== "glamorous.macro"
-        ) {
+        const {value: libName} = path.node.source;
+        if (libName !== "glamorous" && libName !== "glamorous.macro") {
           return;
         }
 
+        // use "styled" as new default import, only if there's no such variable in use yet
         const newName = path.scope.hasBinding("styled")
           ? path.scope.generateUidIdentifier("styled").name
           : "styled";
         let newImports = [];
         let useDefaultImport = false;
 
+        // only if the traversal below wants to know the newName,
+        // we're gonna add the default import
         const getNewName = () => {
           if (!useDefaultImport) {
             newImports.push(
@@ -154,7 +155,8 @@ module.exports = function(babel) {
           return newName;
         };
 
-        path.node.specifiers.filter(s => s.type === "ImportDefaultSpecifier").forEach(s => {
+        // only if the default import of glamorous is used, we're gonna apply the transforms
+        path.node.specifiers.filter(s => t.isImportDefaultSpecifier(s)).forEach(s => {
           path.parentPath.traverse(styledVisitor, {getNewName, oldName: s.local.name});
         });
 
