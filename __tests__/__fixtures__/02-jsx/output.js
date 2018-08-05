@@ -13,3 +13,9 @@ const GDot4 = props => <div css={{
   marginTop: 5,
   marginBottom: "5"
 }} onClick={handler} />;
+
+const GDot5 = props => <img width={100} />;
+
+const GDot6 = props => <span css={{
+  width: 100
+}} />;

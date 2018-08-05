@@ -18,6 +18,8 @@
  * https://astexplorer.net/#/gist/7bc4771564a12c9f93c4904b3934aa1c/latests
  */
 
+const htmlElementAttributes = require("react-html-attributes");
+
 module.exports = function(babel) {
   const {types: t} = babel;
 
@@ -39,7 +41,7 @@ module.exports = function(babel) {
     });
   };
 
-  const transformJSXAttributes = jsxAttrs => {
+  const transformJSXAttributes = (tagName, jsxAttrs) => {
     if (!jsxAttrs) return [];
     const appendToCss = [];
     let cssAttr = null;
@@ -49,11 +51,15 @@ module.exports = function(babel) {
       if (jsxKey.name === "css") {
         cssAttr = attr;
       } else {
-        // TODO: be smarter about finding out which properties
-        // are CSS properties and which ones are not
+        // ignore event handlers
+        if (jsxKey.name.match(/on[A-Z]/)) return true;
 
-        // event handlers are no CSS Props!
-        if (jsxKey.name.indexOf("on") === 0) return true;
+        // ignore generic attributes like 'id'
+        if (htmlElementAttributes["*"].includes(jsxKey.name)) return true;
+
+        // ignore tag specific attrs like 'disabled'
+        const tagSpecificAttrs = htmlElementAttributes[tagName];
+        if (tagSpecificAttrs && tagSpecificAttrs.includes(jsxKey.name)) return true;
 
         appendToCss.push({
           name: t.identifier(jsxKey.name),
@@ -119,9 +125,10 @@ module.exports = function(babel) {
         // replace <glamorous.Div/> with `<div/>`
         case "JSXMemberExpression": {
           const grandParent = path.parentPath.parent;
-          grandParent.name = t.identifier(grandParent.name.property.name.toLowerCase());
+          const tagName = grandParent.name.property.name.toLowerCase();
+          grandParent.name = t.identifier(tagName);
           if (t.isJSXOpeningElement(grandParent)) {
-            grandParent.attributes = transformJSXAttributes(grandParent.attributes);
+            grandParent.attributes = transformJSXAttributes(tagName, grandParent.attributes);
           }
           break;
         }
