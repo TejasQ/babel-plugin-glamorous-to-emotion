@@ -39,50 +39,6 @@ module.exports = function(babel) {
     });
   };
 
-  const transformJSXAttributes = jsxAttrs => {
-    if (!jsxAttrs) return [];
-    const appendToCss = [];
-    let cssAttr = null;
-    const newAttrs = jsxAttrs.filter(attr => {
-      if (t.isJSXSpreadAttribute(attr)) return true;
-      const {value, name: jsxKey} = attr;
-      if (jsxKey.name === "css") {
-        cssAttr = attr;
-      } else {
-        // TODO: be smarter about finding out which properties
-        // are CSS properties and which ones are not
-
-        // event handlers are no CSS Props!
-        if (jsxKey.name.indexOf("on") === 0) return true;
-
-        appendToCss.push({
-          name: t.identifier(jsxKey.name),
-          value: t.isJSXExpressionContainer(value) ? value.expression : value,
-        });
-        return false;
-      }
-      return true;
-    });
-    if (appendToCss.length > 0) {
-      if (!cssAttr) {
-        cssAttr = t.jsxAttribute(
-          t.jsxIdentifier("css"),
-          t.jsxExpressionContainer(t.objectExpression([]))
-        );
-        newAttrs.push(cssAttr);
-      } else if (!t.isObjectExpression(cssAttr.value.expression)) {
-        // turn <span css={obj} .../> into <span css={{...obj}} .../>
-        // so we can add more properties to this css attribute
-        cssAttr.value.expression = t.objectExpression([t.spreadElement(cssAttr.value.expression)]);
-      }
-      appendToCss.forEach(({name, value}) => {
-        cssAttr.value.expression.properties.push(t.objectProperty(name, value));
-      });
-      cssAttr.value.expression.properties;
-    }
-    return newAttrs;
-  };
-
   const styledVisitor = {
     ReferencedIdentifier(path, {getNewName, oldName}) {
       if (path.node.name !== oldName) return;
@@ -112,8 +68,10 @@ module.exports = function(babel) {
         case "JSXMemberExpression": {
           const grandParent = path.parentPath.parent;
           grandParent.name = t.identifier(grandParent.name.property.name.toLowerCase());
-          if (t.isJSXOpeningElement(grandParent)) {
-            grandParent.attributes = transformJSXAttributes(grandParent.attributes);
+          if (t.isJSXOpeningElement(grandParent) && grandParent.attributes) {
+            console.warn(
+              "The current version of the codemod has only weak support of the '<glamorous.Div>' syntax. It won't transform any attributes."
+            );
           }
           break;
         }
