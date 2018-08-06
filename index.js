@@ -122,7 +122,6 @@ module.exports = function(babel) {
       switch (path.parent.type) {
         // replace `glamorous()` with `styled()`
         case "CallExpression": {
-          console.log("path.node", path.node);
           path.replaceWith(getNewName());
           break;
         }
