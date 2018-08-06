@@ -6,3 +6,5 @@ const GDot3 = props => <g.Div marginTop={5}/>;
 const GDot4 = props => <g.Div marginTop={5} css={{marginTop: 10}} marginBottom="5" onClick={handler}/>;
 const GDot5 = props => <g.Img width={100}/>;
 const GDot6 = props => <g.Span width={100}/>;
+const GDot7 = props => <g.Span css={redStyles} marginLeft={5}/>;
+const GDot8 = props => <g.Span css={redStyles} className="my-class"/>;
