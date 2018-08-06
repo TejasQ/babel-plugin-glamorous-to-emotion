@@ -13,133 +13,136 @@
  * babel cli:
  *
  * babel [your-source-dir] --plugins=glamorous-to-emotion --presets=react,etc... --out-dir=[your-source-dir]
- * 
+ *
  * A demo can be seen at:
  * https://astexplorer.net/#/gist/7bc4771564a12c9f93c4904b3934aa1c/latests
  */
 
-module.exports = function (babel) {
-    const { types: t } = babel;
+module.exports = function(babel) {
+  const {types: t} = babel;
 
-    return {
-        visitor: {
-            /**
-             * Find all JSX elements that use the old
-             * <glamorous.Something> notation and rewrite them to be
-             * plain ole somethings.
-             */
-            JSXElement(path) {
-                path.traverse({
-                    "JSXOpeningElement|JSXClosingElement"(path) {
-                        if (!t.isJSXMemberExpression(path.node.name)) {
-                            return;
-                        }
-                        if (path.node.name.object.name !== "glamorous") {
-                            return;
-                        }
-                        path.node.name = t.identifier(
-                            path.node.name.property.name.toLowerCase()
-                        );
-                    }
-                });
-            },
+  // glamorous and emotion treat the css attribute "content" differently.
+  // we need to put it's content inside a string.
+  // i.e. turn {content: ""} into {content: '""'}
+  const fixContentProp = glamorousFactoryArguments => {
+    return glamorousFactoryArguments.map(arg => {
+      if (t.isObjectExpression(arg)) {
+        arg.properties = arg.properties.map(
+          prop =>
+            prop.key.name === "content"
+              ? {...prop, value: t.stringLiteral(`"${prop.value.value}"`)}
+              : prop
+        );
+      }
+      // TODO: if `arg` is a function, we might want to inspect its return value
+      return arg;
+    });
+  };
 
-            /**
-             * Find glamorous import statements, including ThemeProvider
-             * imports and rewrite them to be emotion imports.
-             */
-            ImportDeclaration(path, { opts }) {
-                if (path.node.source.value !== "glamorous") {
-                    return;
-                }
+  const glamorousVisitor = {
+    // for each reference to an identifier...
+    ReferencedIdentifier(path, {getNewName, oldName}) {
+      // skip if the name of the identifier does not correspond to the name of glamorous default import
+      if (path.node.name !== oldName) return;
 
-                // First, check for ThemeProvider and update that.
-                const themeProviderIndex = path.node.specifiers.findIndex(
-                    specifier => specifier.local.name === "ThemeProvider"
-                );
-
-                if (~themeProviderIndex) {
-                    path.insertAfter(
-                        t.importDeclaration(
-                            [
-                                t.importSpecifier(
-                                    t.identifier("ThemeProvider"),
-                                    t.identifier("ThemeProvider")
-                                )
-                            ],
-                            t.stringLiteral("emotion-theming")
-                        )
-                    );
-                }
-
-                // Then, replace the whole path with an emotion one!
-                path.replaceWith(
-                    t.importDeclaration(
-                        [t.importDefaultSpecifier(t.identifier("styled"))],
-                        t.stringLiteral(opts.preact ? "preact-emotion" : "react-emotion")
-                    )
-                );
-            },
-
-            /**
-             * Lastly, find all glamorous.Something() calls
-             * and replace them with emotion('something') calls.
-             */
-            CallExpression(path) {
-
-                /**
-                 * First, rewrite all glamorous(Something) calls.
-                 */
-                if (
-                    t.isIdentifier(path.node.callee) &&
-                    path.node.callee.name === "glamorous"
-                ) {
-                    path.node.callee.name = "styled";
-                    return;
-                }
-
-                /**
-                 * Now, rewrite all glamorous.div(someStyle) calls.
-                 */
-                if (!t.isMemberExpression(path.node.callee)) {
-                    return;
-                }
-                if (path.node.callee.object.name !== "glamorous") {
-                    return;
-                }
-                path.replaceWith(
-                    t.callExpression(
-                        t.callExpression(t.identifier("styled"), [
-                            t.stringLiteral(path.node.callee.property.name)
-                        ]),
-
-                        /**
-                         * Map over the arguments for an ObjectExpression,
-                         * usually the styles, and look for the 'content'
-                         * property.
-                         */
-                        path.node.arguments.map(argument => {
-                            if (argument.type !== "ObjectExpression") {
-                                return argument;
-                            }
-                            return {
-                                ...argument,
-                                properties: argument.properties.map(prop => {
-                                    if (prop.key.name !== "content") {
-                                        return prop;
-                                    }
-
-                                    // Add quotes to the content property.
-                                    return {
-                                        ...prop,
-                                        value: t.stringLiteral(`"${prop.value.value}"`)
-                                    };
-                                })
-                            };
-                        })
-                    )
-                );
-            }
+      switch (path.parent.type) {
+        // replace `glamorous()` with `styled()`
+        case "CallExpression": {
+          path.node.name = getNewName();
+          break;
         }
-    };
+
+        // replace `glamorous.div()` with `styled("div")()`
+        case "MemberExpression": {
+          const grandParentPath = path.parentPath.parentPath;
+          if (t.isCallExpression(grandParentPath.node)) {
+            grandParentPath.replaceWith(
+              t.callExpression(
+                t.callExpression(t.identifier(getNewName()), [
+                  t.stringLiteral(grandParentPath.node.callee.property.name),
+                ]),
+                fixContentProp(grandParentPath.node.arguments)
+              )
+            );
+          } else {
+            throw new Error(
+              `Not sure how to deal with glamorous within MemberExpression @ ${path.node.loc}`
+            );
+          }
+          break;
+        }
+
+        // replace <glamorous.Div/> with `<div/>`
+        case "JSXMemberExpression": {
+          const grandParent = path.parentPath.parent;
+          grandParent.name = t.identifier(grandParent.name.property.name.toLowerCase());
+          if (t.isJSXOpeningElement(grandParent) && grandParent.attributes) {
+            console.warn(
+              "The current version of the codemod has only weak support of the '<glamorous.Div>' syntax. It won't transform any attributes."
+            );
+          }
+          break;
+        }
+
+        default: {
+          console.warning("Found glamorous being used in an unkonwn context:", path.parent.type);
+        }
+      }
+    },
+  };
+
+  return {
+    name: "glamorousToEmotion",
+    visitor: {
+      ImportDeclaration(path, {opts}) {
+        const {value: libName} = path.node.source;
+        if (libName !== "glamorous" && libName !== "glamorous.macro") {
+          return;
+        }
+
+        // use "styled" as new default import, only if there's no such variable in use yet
+        const newName = path.scope.hasBinding("styled")
+          ? path.scope.generateUidIdentifier("styled").name
+          : "styled";
+        let newImports = [];
+        let useDefaultImport = false;
+
+        // only if the traversal below wants to know the newName,
+        // we're gonna add the default import
+        const getNewName = () => {
+          if (!useDefaultImport) {
+            newImports.push(
+              t.importDeclaration(
+                [t.importDefaultSpecifier(t.identifier(newName))],
+                t.stringLiteral(opts.preact ? "preact-emotion" : "react-emotion")
+              )
+            );
+            useDefaultImport = true;
+          }
+          return newName;
+        };
+
+        // only if the default import of glamorous is used, we're gonna apply the transforms
+        path.node.specifiers.filter(s => t.isImportDefaultSpecifier(s)).forEach(s => {
+          path.parentPath.traverse(glamorousVisitor, {getNewName, oldName: s.local.name});
+        });
+
+        const themeProvider = path.node.specifiers.find(
+          specifier => specifier.local.name === "ThemeProvider"
+        );
+
+        if (themeProvider) {
+          newImports.push(
+            t.importDeclaration(
+              [t.importSpecifier(t.identifier("ThemeProvider"), t.identifier("ThemeProvider"))],
+              t.stringLiteral("emotion-theming")
+            )
+          );
+        }
+
+        newImports.forEach(ni => path.insertBefore(ni));
+        path.remove();
+      },
+    },
+  };
 };

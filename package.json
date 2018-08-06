@@ -5,5 +5,30 @@
   "main": "index.js",
   "repository": "https://github.com/tejasq/babel-plugin-glamorous-to-emotion",
   "author": "Tejas Kumar <tejas@tejas.qa>",
-  "license": "MIT"
+  "contributors": [
+    "Daniel Berndt <daniel.berndt@gmail.com> (http://danielberndt.net/)"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "jest",
+    "eslint": "eslint index.js __tests__/**/*.js"
+  },
+  "jest": {
+    "testURL": "http://localhost/",
+    "testPathIgnorePatterns": [
+      "/__fixtures__/",
+      "/node_modules/"
+    ]
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0-beta.55",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-eslint": "^8.2.6",
+    "babel-jest": "^23.4.2",
+    "babel-plugin-tester": "^5.4.0",
+    "babel-preset-env": "^7.0.0-beta.3",
+    "babel-preset-react": "^7.0.0-beta.3",
+    "eslint": "4.x",
+    "jest": "^23.4.2"
+  }
 }
