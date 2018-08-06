@@ -5,6 +5,9 @@
   "main": "index.js",
   "repository": "https://github.com/tejasq/babel-plugin-glamorous-to-emotion",
   "author": "Tejas Kumar <tejas@tejas.qa>",
+  "contributors": [
+    "Daniel Berndt <daniel.berndt@gmail.com> (http://danielberndt.net/)"
+  ],
   "license": "MIT",
   "scripts": {
     "test": "jest",
