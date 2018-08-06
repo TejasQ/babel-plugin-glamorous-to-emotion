@@ -39,14 +39,20 @@ module.exports = function(babel) {
     });
   };
 
-  const styledVisitor = {
+  const glamorousVisitor = {
+    // for each reference to an identifier...
     ReferencedIdentifier(path, {getNewName, oldName}) {
+      // skip if the name of the identifier does not correspond to the name of glamorous default import
       if (path.node.name !== oldName) return;
+
       switch (path.parent.type) {
+        // replace `glamorous()` with `styled()`
         case "CallExpression": {
           path.node.name = getNewName();
           break;
         }
+
+        // replace `glamorous.div()` with `styled("div")()`
         case "MemberExpression": {
           const grandParentPath = path.parentPath.parentPath;
           if (t.isCallExpression(grandParentPath.node)) {
@@ -65,6 +71,8 @@ module.exports = function(babel) {
           }
           break;
         }
+
+        // replace <glamorous.Div/> with `<div/>`
         case "JSXMemberExpression": {
           const grandParent = path.parentPath.parent;
           grandParent.name = t.identifier(grandParent.name.property.name.toLowerCase());
@@ -75,6 +83,7 @@ module.exports = function(babel) {
           }
           break;
         }
+
         default: {
           console.warning("Found glamorous being used in an unkonwn context:", path.parent.type);
         }
@@ -115,7 +124,7 @@ module.exports = function(babel) {
 
         // only if the default import of glamorous is used, we're gonna apply the transforms
         path.node.specifiers.filter(s => t.isImportDefaultSpecifier(s)).forEach(s => {
-          path.parentPath.traverse(styledVisitor, {getNewName, oldName: s.local.name});
+          path.parentPath.traverse(glamorousVisitor, {getNewName, oldName: s.local.name});
         });
 
         const themeProvider = path.node.specifiers.find(
