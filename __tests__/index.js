@@ -2,7 +2,7 @@ import pluginTester from "babel-plugin-tester";
 import glamorousToEmotion from "../index.js";
 import path from "path";
 
-pluginTester({
+const sharedOptions = {
   plugin: glamorousToEmotion,
   babelOptions: {
     // taken from https://github.com/square/babel-codemod/blob/00ae5984e1b2ca2fac923011ce16157a29b12b39/src/AllSyntaxPlugin.ts
@@ -28,5 +28,17 @@ pluginTester({
     babelrc: false,
     compact: false,
   },
-  fixtures: path.join(__dirname, "__fixtures__"),
+};
+
+pluginTester({
+  ...sharedOptions,
+  fixtures: path.join(__dirname, "__fixtures__", "without-babel-plugin"),
+});
+
+pluginTester({
+  ...sharedOptions,
+  fixtures: path.join(__dirname, "__fixtures__", "with-babel-plugin"),
+  pluginOptions: {
+    withBabelPlugin: true,
+  },
 });
