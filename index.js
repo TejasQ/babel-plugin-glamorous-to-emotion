@@ -47,7 +47,7 @@ module.exports = function(babel) {
     const stylesArguments = [];
     let classNameAttr = null;
     let originalCssValue;
-    const newAttrs = jsxAttrs.filter(attr => {
+    const transformedJsxAttrs = jsxAttrs.filter(attr => {
       if (t.isJSXSpreadAttribute(attr)) return true;
       const {value, name: jsxKey} = attr;
       if (jsxKey.name === "css") {
@@ -92,7 +92,7 @@ module.exports = function(babel) {
 
       if (withBabelPlugin) {
         // if babel plugin is enabled use <div css={styles}/> syntax
-        newAttrs.push(
+        transformedJsxAttrs.push(
           t.jsxAttribute(t.jsxIdentifier("css"), t.jsxExpressionContainer(stylesObject))
         );
       } else {
@@ -100,7 +100,7 @@ module.exports = function(babel) {
 
         if (!classNameAttr) {
           const cssCall = t.callExpression(getCssFn(), [stylesObject]);
-          newAttrs.push(
+          transformedJsxAttrs.push(
             t.jsxAttribute(t.jsxIdentifier("className"), t.jsxExpressionContainer(cssCall))
           );
         } else {
@@ -110,19 +110,19 @@ module.exports = function(babel) {
         }
       }
     }
-    return newAttrs;
+    return transformedJsxAttrs;
   };
 
   const glamorousVisitor = {
     // for each reference to an identifier...
-    ReferencedIdentifier(path, {getNewName, oldName, withBabelPlugin, getCssFn, getCxFn}) {
+    ReferencedIdentifier(path, {getStyledFn, oldName, withBabelPlugin, getCssFn, getCxFn}) {
       // skip if the name of the identifier does not correspond to the name of glamorous default import
       if (path.node.name !== oldName) return;
 
       switch (path.parent.type) {
         // replace `glamorous()` with `styled()`
         case "CallExpression": {
-          path.replaceWith(getNewName());
+          path.replaceWith(getStyledFn());
           break;
         }
 
@@ -132,7 +132,7 @@ module.exports = function(babel) {
           if (t.isCallExpression(grandParentPath.node)) {
             grandParentPath.replaceWith(
               t.callExpression(
-                t.callExpression(getNewName(), [
+                t.callExpression(getStyledFn(), [
                   t.stringLiteral(grandParentPath.node.callee.property.name),
                 ]),
                 fixContentProp(grandParentPath.node.arguments)
@@ -179,15 +179,14 @@ module.exports = function(babel) {
           return;
         }
 
-        // use "styled" as new default import, only if there's no such variable in use yet
+        // use "name" as identifier, but only if it's not already used in the current scope
         const createUniqueIdentifier = name =>
           path.scope.hasBinding(name) ? path.scope.generateUidIdentifier(name) : t.identifier(name);
-        let newImports = [];
+
+        // this object collects all the imports we'll need from "react-emotion"
         let emotionImports = {};
 
-        // only if the traversal below wants to know the newName,
-        // we're gonna add the default import
-        const getNewName = () => {
+        const getStyledFn = () => {
           if (!emotionImports["default"]) {
             emotionImports["default"] = t.importDefaultSpecifier(createUniqueIdentifier("styled"));
           }
@@ -213,7 +212,7 @@ module.exports = function(babel) {
         // only if the default import of glamorous is used, we're gonna apply the transforms
         path.node.specifiers.filter(s => t.isImportDefaultSpecifier(s)).forEach(s => {
           path.parentPath.traverse(glamorousVisitor, {
-            getNewName,
+            getStyledFn,
             oldName: s.local.name,
             withBabelPlugin: opts.withBabelPlugin,
             getCssFn,
@@ -226,7 +225,7 @@ module.exports = function(babel) {
         );
 
         if (themeProvider) {
-          newImports.push(
+          path.insertBefore(
             t.importDeclaration(
               [t.importSpecifier(t.identifier("ThemeProvider"), t.identifier("ThemeProvider"))],
               t.stringLiteral("emotion-theming")
@@ -236,7 +235,7 @@ module.exports = function(babel) {
 
         // if we needed something from the emotion lib, we need to add the import
         if (Object.keys(emotionImports).length) {
-          newImports.push(
+          path.insertBefore(
             t.importDeclaration(
               Object.values(emotionImports),
               t.stringLiteral(opts.preact ? "preact-emotion" : "react-emotion")
@@ -244,7 +243,6 @@ module.exports = function(babel) {
           );
         }
 
-        newImports.forEach(ni => path.insertBefore(ni));
         path.remove();
       },
     },
