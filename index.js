@@ -47,6 +47,11 @@ module.exports = function(babel) {
     const stylesArguments = [];
     let classNameAttr = null;
     let originalCssValue;
+
+    /*
+      We go through all jsx attributes and filter out all style-specific props. E.g `css` or `marginTop`.
+      All style-specific props are gathered within `stylesArguments` and processed below
+    */
     const transformedJsxAttrs = jsxAttrs.filter(attr => {
       if (t.isJSXSpreadAttribute(attr)) return true;
       const {value, name: jsxKey} = attr;
