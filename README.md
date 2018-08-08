@@ -21,15 +21,19 @@ This will put you fully in emotion-land.
 
 ### Options
 
-You may also pass a `--plugin-options` argument to the `babel-codemod` command. Here are the available options:
+You may also pass a `--plugin-options` argument to the `babel-codemod` command. Here's a sample call:
 
-- **`withBabelPlugin=true`**
+```
+npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{\"withBabelPlugin\": true}' src/**/*.js
+```
+
+- **`withBabelPlugin`**
 
   Tells the plugin that your emotion setup includes the [emotion-babel-plugin](https://github.com/emotion-js/emotion/tree/master/packages/babel-plugin-emotion). Without this option, `<glamorous.Div marginTop={5}/>` gets translated to `<div className={css({marginTop: 5})}>`.
 
   If this option is enabled, it will be transformed to `<div css={{marginTop: 5}}>`.
 
-- **`preact=true`**
+- **`preact`**
 
   Uses `import styled from "preact-emotion"` instead of `import styled from "react-emotion"`
 
