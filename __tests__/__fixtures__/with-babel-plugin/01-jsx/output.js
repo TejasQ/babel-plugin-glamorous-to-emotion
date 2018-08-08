@@ -8,11 +8,11 @@ const GDot3 = props => <div css={{
   marginTop: 5
 }} />;
 
-const GDot4 = props => <div onClick={handler} css={{
+const GDot4 = props => <div css={{
   marginTop: 10,
   marginTop: 5,
   marginBottom: "5"
-}} />;
+}} onClick={handler} />;
 
 const GDot5 = props => <img width={100} />;
 
@@ -24,4 +24,12 @@ const GDot7 = props => <span css={{ ...redStyles,
   marginLeft: 5
 }} />;
 
-const GDot8 = props => <span className="my-class" css={redStyles} />;
+const GDot8 = props => <span css={redStyles} className="my-class" />;
+
+const GDot9 = props => <span css={styles} {...props} />;
+
+const GDot10 = props => <span {...props} css={styles} />;
+
+const GDot11 = props => <span {...props} css={{ ...props.css,
+  marginTop: 5
+}} />;

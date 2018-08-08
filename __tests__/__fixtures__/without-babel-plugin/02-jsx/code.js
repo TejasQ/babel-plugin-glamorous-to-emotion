@@ -8,3 +8,6 @@ const GDot5 = props => <g.Img width={100}/>;
 const GDot6 = props => <g.Span width={100}/>;
 const GDot7 = props => <g.Span css={redStyles} marginLeft={5}/>;
 const GDot8 = props => <g.Span css={redStyles} className="my-class"/>;
+const GDot9 = props => <g.Span css={styles} {...props}/>;
+const GDot10 = props => <g.Span {...props} css={styles}/>;
+const GDot11 = props => <g.Span marginTop={5} {...props}/>;
