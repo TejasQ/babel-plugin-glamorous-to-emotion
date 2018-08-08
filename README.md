@@ -15,7 +15,7 @@ You'll need to use [`babel-codemod`](https://github.com/square/babel-codemod) to
 
 - First, install this plugin: `yarn add babel-plugin-glamorous-to-emotion -D`
 
-- Then run it: `npx babel-codemod --plugin glamorous-to-emotion "src/**/*.js"` or a similar variation depending on your directory structure.
+- Then run it: `npx babel-codemod --plugin babel-plugin-glamorous-to-emotion "src/**/*.js"` or a similar variation depending on your directory structure.
 
 This will put you fully in emotion-land.
 
