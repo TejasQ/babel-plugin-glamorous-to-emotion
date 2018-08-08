@@ -27,3 +27,11 @@ const GDot7 = props => <span className={css({ ...redStyles,
 })} />;
 
 const GDot8 = props => <span className={cx("my-class", redStyles)} />;
+
+const GDot9 = props => <span {...props} className={cx(props.className, styles)} />;
+
+const GDot10 = props => <span {...props} className={cx(props.className, styles)} />;
+
+const GDot11 = props => <span {...props} className={cx(props.className, {
+  marginTop: 5
+})} />;

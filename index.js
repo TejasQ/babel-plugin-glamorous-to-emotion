@@ -46,6 +46,7 @@ module.exports = function(babel) {
     if (!jsxAttrs) return [];
     const stylesArguments = [];
     let classNameAttr = null;
+    const spreadsAttrs = [];
     let originalCssValue;
 
     /*
@@ -53,17 +54,20 @@ module.exports = function(babel) {
       All style-specific props are gathered within `stylesArguments` and processed below
     */
     const transformedJsxAttrs = jsxAttrs.filter(attr => {
-      if (t.isJSXSpreadAttribute(attr)) return true;
+      if (t.isJSXSpreadAttribute(attr)) {
+        spreadsAttrs.push(attr);
+        return true;
+      }
       const {value, name: jsxKey} = attr;
       if (jsxKey.name === "css") {
-        originalCssValue = value.expression;
+        originalCssValue = value;
         // move properties of css attribute to the very front via unshift
         if (!t.isObjectExpression(value.expression)) {
           stylesArguments.unshift(t.spreadElement(value.expression));
         } else {
           stylesArguments.unshift(...value.expression.properties);
         }
-        return false;
+        return withBabelPlugin;
       } else if (jsxKey.name === "className") {
         classNameAttr = attr;
       } else {
@@ -89,29 +93,58 @@ module.exports = function(babel) {
     });
 
     if (stylesArguments.length > 0) {
+      // if something is spread onto the element, this spread may contain a css prop
+      if (withBabelPlugin && spreadsAttrs.length) {
+        // we only need to deal with spreads, if `css` is not explicitely set
+        if (!originalCssValue) {
+          spreadsAttrs.forEach(attr =>
+            stylesArguments.unshift(
+              t.spreadElement(t.memberExpression(attr.argument, t.identifier("css")))
+            )
+          );
+        }
+      }
+
       // if the css property was the only object, we don't need to use it's spreaded version
       const stylesObject =
         originalCssValue && stylesArguments.length === 1
-          ? originalCssValue
+          ? originalCssValue.expression
           : t.objectExpression(stylesArguments);
 
       if (withBabelPlugin) {
         // if babel plugin is enabled use <div css={styles}/> syntax
-        transformedJsxAttrs.push(
-          t.jsxAttribute(t.jsxIdentifier("css"), t.jsxExpressionContainer(stylesObject))
-        );
+        if (originalCssValue) {
+          originalCssValue.expression = stylesObject;
+        } else {
+          transformedJsxAttrs.push(
+            t.jsxAttribute(t.jsxIdentifier("css"), t.jsxExpressionContainer(stylesObject))
+          );
+        }
       } else {
         // if babel plugin is not enabled use <div className={css(styles)}/> syntax
-
-        if (!classNameAttr) {
+        let classNameValue;
+        if (!classNameAttr && !spreadsAttrs.length) {
           const cssCall = t.callExpression(getCssFn(), [stylesObject]);
-          transformedJsxAttrs.push(
-            t.jsxAttribute(t.jsxIdentifier("className"), t.jsxExpressionContainer(cssCall))
-          );
+          classNameValue = t.jsxExpressionContainer(cssCall);
         } else {
-          // if className is already present use <div className={cx("my-className", styles)}/> syntax
-          const cxCall = t.callExpression(getCxFn(), [classNameAttr.value, stylesObject]);
-          classNameAttr.value = t.jsxExpressionContainer(cxCall);
+          let args = [];
+          if (classNameAttr) {
+            // if className is already present use <div className={cx("my-className", styles)}/> syntax
+            args.push(classNameAttr.value);
+          } else {
+            // if spreads are present use <div {...props} className={cx(props.className, styles)}/> syntax
+            spreadsAttrs.forEach(attr => {
+              args.push(t.memberExpression(attr.argument, t.identifier("className")));
+            });
+          }
+          args.push(stylesObject);
+          const cxCall = t.callExpression(getCxFn(), args);
+          classNameValue = t.jsxExpressionContainer(cxCall);
+        }
+        if (classNameAttr) {
+          classNameAttr.value = classNameValue;
+        } else {
+          transformedJsxAttrs.push(t.jsxAttribute(t.jsxIdentifier("className"), classNameValue));
         }
       }
     }
