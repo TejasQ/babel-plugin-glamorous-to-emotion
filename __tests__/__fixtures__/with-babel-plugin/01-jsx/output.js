@@ -1,4 +1,4 @@
-const GDot1 = props => <span {...props}>Hi, I'm a Span!</span>;
+const GDot1 = props => <span {...props}>Hi, I’m a Span!</span>;
 
 const GDot2 = props => <div css={{
   marginTop: 5

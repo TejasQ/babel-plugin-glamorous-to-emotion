@@ -1,6 +1,6 @@
 import { css, cx } from "react-emotion";
 
-const GDot1 = props => <span {...props}>Hi, I'm a Span!</span>;
+const GDot1 = props => <span {...props}>Hi, I’m a Span!</span>;
 
 const GDot2 = props => <div className={css({
   marginTop: 5

@@ -23,6 +23,93 @@ const htmlElementAttributes = require("react-html-attributes");
 module.exports = function(babel) {
   const {types: t} = babel;
 
+  // try to convert filterProps etc into something emotion understands
+  const processOptions = options => {
+    if (!t.isObjectExpression(options)) {
+      const name = t.isIdentifier(options) ? options.name : options.type;
+      console.warn(
+        `codemod received '${name}' as an options argument. This is left in place, but will probably contain content that emotion won't understand`
+      );
+
+      return options;
+    } else {
+      const transformedOptions = [];
+      let forwardPropsExpr = [];
+      options.properties.forEach(prop => {
+        const {key, value} = prop;
+        switch (key.name) {
+          case "filterProps": {
+            // filterProps: ["one"] ---> prop !== "one"
+            if (t.isArrayExpression(value) && value.elements.length === 1) {
+              forwardPropsExpr.push(
+                t.binaryExpression("!==", t.identifier("prop"), value.elements[0])
+              );
+            } else {
+              // filterProps: ["one", "two"] ---> ["one", "two"].indexOf(prop) === -1
+              forwardPropsExpr.push(
+                t.binaryExpression(
+                  "===",
+                  t.callExpression(t.memberExpression(value, t.identifier("indexOf")), [
+                    t.identifier("prop"),
+                  ]),
+                  t.numericLiteral(-1)
+                )
+              );
+            }
+            break;
+          }
+          case "forwardProps": {
+            // forwardProps: ["one"] ---> prop === "one"
+            if (t.isArrayExpression(value) && value.elements.length === 1) {
+              forwardPropsExpr.push(
+                t.binaryExpression("===", t.identifier("prop"), value.elements[0])
+              );
+            } else {
+              // forwardProps: ["one", "two"] ---> ["one", "two"].indexOf(prop) > -1
+              forwardPropsExpr.push(
+                t.binaryExpression(
+                  ">",
+                  t.callExpression(t.memberExpression(value, t.identifier("indexOf")), [
+                    t.identifier("prop"),
+                  ]),
+                  t.numericLiteral(-1)
+                )
+              );
+            }
+            break;
+          }
+          default: {
+            console.warn(
+              `codemod received '${key}' as an option. This is left in place, but will probably not be undestood by emotion`
+            );
+            transformedOptions.push(prop);
+          }
+        }
+      });
+      if (forwardPropsExpr.length) {
+        // concatenate all expressions via "&&"
+        const reducedExpr = forwardPropsExpr.reduce((existing, expr) =>
+          t.logicalExpression("&&", existing, expr)
+        );
+        // create `{shouldForwardProp: prop => [reducedExpr]}` expression
+        transformedOptions.push(
+          t.objectProperty(
+            t.identifier("shouldForwardProp"),
+            t.arrowFunctionExpression([t.identifier("prop")], reducedExpr)
+          )
+        );
+      }
+      return t.objectExpression(transformedOptions);
+    }
+  };
+
+  const processGlamorousArgs = args => {
+    if (args.length === 0) throw new Error("Can't handle glamorous call with 0 arguments");
+    if (args.length > 2) throw new Error("Can't handle glamorous call with more than 2 arguments");
+    if (args.length === 1) return args;
+    return [args[0], processOptions(args[1])];
+  };
+
   // glamorous and emotion treat the css attribute "content" differently.
   // we need to put it's content inside a string.
   // i.e. turn {content: ""} into {content: '""'}
@@ -160,7 +247,8 @@ module.exports = function(babel) {
       switch (path.parent.type) {
         // replace `glamorous()` with `styled()`
         case "CallExpression": {
-          path.replaceWith(getStyledFn());
+          const transformedArguments = processGlamorousArgs(path.parent.arguments);
+          path.parentPath.replaceWith(t.callExpression(getStyledFn(), transformedArguments));
           break;
         }
 
