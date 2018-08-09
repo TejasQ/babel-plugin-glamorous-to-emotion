@@ -24,7 +24,7 @@ This will put you fully in emotion-land.
 You may also pass a `--plugin-options` argument to the `babel-codemod` command. Here's a sample call:
 
 ```
-npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{\"withBabelPlugin\": true}' src/**/*.js
+npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{"withBabelPlugin": true}' src/**/*.js
 ```
 
 - **`withBabelPlugin`**
