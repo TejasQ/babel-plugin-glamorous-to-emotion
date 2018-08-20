@@ -11,3 +11,4 @@ const GDot8 = props => <g.Span css={redStyles} className="my-class"/>;
 const GDot9 = props => <g.Span css={styles} {...props}/>;
 const GDot10 = props => <g.Span {...props} css={styles}/>;
 const GDot11 = props => <g.Span marginTop={5} {...props}/>;
+const GDot12 = props => <g.Div marginTop={5} innerRef={handler}/>;

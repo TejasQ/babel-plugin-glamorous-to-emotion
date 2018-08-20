@@ -33,3 +33,7 @@ const GDot10 = props => <span {...props} css={styles} />;
 const GDot11 = props => <span {...props} css={{ ...props.css,
   marginTop: 5
 }} />;
+
+const GDot12 = props => <div ref={handler} css={{
+  marginTop: 5
+}} />;
