@@ -20,6 +20,11 @@
 
 const htmlElementAttributes = require("react-html-attributes");
 
+const validElementNames = new Set([
+  ...htmlElementAttributes.elements.html,
+  ...htmlElementAttributes.elements.svg,
+]);
+
 module.exports = function(babel) {
   const {types: t} = babel;
 
@@ -348,6 +353,44 @@ module.exports = function(babel) {
             getCxFn,
           });
         });
+
+        /*
+        `import {Span, Div as StyledDiv} from "glamorous"`
+        will be represented as `importedTags = {"Span": "span", "StyledDiv": "div"}`
+        */
+        const importedTags = {};
+
+        path.node.specifiers.filter(s => t.isImportSpecifier(s)).forEach(({imported, local}) => {
+          const tagName = imported.name.toLowerCase();
+          if (validElementNames.has(tagName)) {
+            importedTags[local.name] = tagName;
+          }
+        });
+
+        // tranform corresponding JSXElements if any html element imports were found
+        if (Object.keys(importedTags).length) {
+          path.parentPath.traverse({
+            "JSXOpeningElement|JSXClosingElement": path => {
+              const componentIdentifier = path.node.name;
+              // exclude MemberEpressions
+              if (!t.isJSXIdentifier(componentIdentifier)) return;
+
+              const targetTagName = importedTags[componentIdentifier.name];
+              if (!targetTagName) return;
+
+              componentIdentifier.name = targetTagName;
+              if (t.isJSXOpeningElement(path)) {
+                path.node.attributes = transformJSXAttributes({
+                  targetTagName,
+                  jsxAttrs: path.node.attributes,
+                  withBabelPlugin: opts.withBabelPlugin,
+                  getCssFn,
+                  getCxFn,
+                });
+              }
+            },
+          });
+        }
 
         const themeProvider = path.node.specifiers.find(
           specifier => specifier.local.name === "ThemeProvider"

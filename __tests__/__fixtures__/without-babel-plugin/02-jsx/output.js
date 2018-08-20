@@ -39,3 +39,13 @@ const GDot11 = props => <span {...props} className={cx(props.className, {
 const GDot12 = props => <div ref={handler} className={css({
   marginTop: 5
 })} />;
+
+const GDot13 = props => <div className={css({
+  marginTop: 5
+})} />;
+
+const GDot14 = props => <span className={css({
+  marginTop: 5
+})}>content</span>;
+
+const GDot15 = props => <other.StyledSpan marginTop={5} />;
