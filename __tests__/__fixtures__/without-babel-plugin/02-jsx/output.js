@@ -35,3 +35,7 @@ const GDot10 = props => <span {...props} className={cx(props.className, styles)}
 const GDot11 = props => <span {...props} className={cx(props.className, {
   marginTop: 5
 })} />;
+
+const GDot12 = props => <div ref={handler} className={css({
+  marginTop: 5
+})} />;

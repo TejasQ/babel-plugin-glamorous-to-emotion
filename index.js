@@ -157,6 +157,9 @@ module.exports = function(babel) {
         return withBabelPlugin;
       } else if (jsxKey.name === "className") {
         classNameAttr = attr;
+      } else if (jsxKey.name === "innerRef") {
+        // turn `innerRef` into `ref`
+        jsxKey.name = "ref";
       } else {
         // ignore event handlers
         if (jsxKey.name.match(/on[A-Z]/)) return true;
