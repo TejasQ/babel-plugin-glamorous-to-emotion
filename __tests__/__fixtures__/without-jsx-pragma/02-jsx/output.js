@@ -1,4 +1,5 @@
-import { css, cx } from "@emotion/core";
+import { css } from "@emotion/core";
+import { cx } from "emotion";
 
 const GDot1 = props => <span {...props}>Hi, I’m a Span!</span>;
 

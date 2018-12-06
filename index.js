@@ -342,7 +342,6 @@ module.exports = function(babel) {
 
         const getCssFn = () => {
           if (!imports["@emotion/core"]) imports["@emotion/core"] = {};
-          // verify whether css export exists here!
           if (!imports["@emotion/core"].css) {
             const specifier = t.importSpecifier(t.identifier("css"), createUniqueIdentifier("css"));
             imports["@emotion/core"].css = specifier;
@@ -351,13 +350,12 @@ module.exports = function(babel) {
         };
 
         const getCxFn = () => {
-          if (!imports["@emotion/core"]) imports["@emotion/core"] = {};
-          // verify whether css export exists here!
-          if (!imports["@emotion/core"].cx) {
+          if (!imports["emotion"]) imports["emotion"] = {};
+          if (!imports["emotion"].cx) {
             const specifier = t.importSpecifier(t.identifier("cx"), createUniqueIdentifier("cx"));
-            imports["@emotion/core"].cx = specifier;
+            imports["emotion"].cx = specifier;
           }
-          return imports["@emotion/core"].cx.local;
+          return imports["emotion"].cx.local;
         };
 
         const useJsxPragma = () => {
