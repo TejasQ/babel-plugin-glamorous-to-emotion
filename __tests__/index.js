@@ -32,13 +32,13 @@ const sharedOptions = {
 
 pluginTester({
   ...sharedOptions,
-  fixtures: path.join(__dirname, "__fixtures__", "without-babel-plugin"),
+  fixtures: path.join(__dirname, "__fixtures__", "without-jsx-pragma"),
+  pluginOptions: {
+    withoutJsxPragma: true,
+  },
 });
 
 pluginTester({
   ...sharedOptions,
-  fixtures: path.join(__dirname, "__fixtures__", "with-babel-plugin"),
-  pluginOptions: {
-    withBabelPlugin: true,
-  },
+  fixtures: path.join(__dirname, "__fixtures__", "with-jsx-pragma"),
 });
