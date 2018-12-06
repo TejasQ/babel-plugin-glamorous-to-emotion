@@ -121,11 +121,10 @@ module.exports = function(babel) {
   const fixContentProp = glamorousFactoryArguments => {
     return glamorousFactoryArguments.map(arg => {
       if (t.isObjectExpression(arg)) {
-        arg.properties = arg.properties.map(
-          prop =>
-            prop.key.name === "content"
-              ? {...prop, value: t.stringLiteral(`"${prop.value.value}"`)}
-              : prop
+        arg.properties = arg.properties.map(prop =>
+          prop.key.name === "content"
+            ? {...prop, value: t.stringLiteral(`"${prop.value.value}"`)}
+            : prop
         );
       }
       // TODO: if `arg` is a function, we might want to inspect its return value
@@ -344,15 +343,17 @@ module.exports = function(babel) {
         };
 
         // only if the default import of glamorous is used, we're gonna apply the transforms
-        path.node.specifiers.filter(s => t.isImportDefaultSpecifier(s)).forEach(s => {
-          path.parentPath.traverse(glamorousVisitor, {
-            getStyledFn,
-            oldName: s.local.name,
-            withBabelPlugin: opts.withBabelPlugin,
-            getCssFn,
-            getCxFn,
+        path.node.specifiers
+          .filter(s => t.isImportDefaultSpecifier(s))
+          .forEach(s => {
+            path.parentPath.traverse(glamorousVisitor, {
+              getStyledFn,
+              oldName: s.local.name,
+              withBabelPlugin: opts.withBabelPlugin,
+              getCssFn,
+              getCxFn,
+            });
           });
-        });
 
         /*
         `import {Span, Div as StyledDiv} from "glamorous"`
@@ -360,12 +361,14 @@ module.exports = function(babel) {
         */
         const importedTags = {};
 
-        path.node.specifiers.filter(s => t.isImportSpecifier(s)).forEach(({imported, local}) => {
-          const tagName = imported.name.toLowerCase();
-          if (validElementNames.has(tagName)) {
-            importedTags[local.name] = tagName;
-          }
-        });
+        path.node.specifiers
+          .filter(s => t.isImportSpecifier(s))
+          .forEach(({imported, local}) => {
+            const tagName = imported.name.toLowerCase();
+            if (validElementNames.has(tagName)) {
+              importedTags[local.name] = tagName;
+            }
+          });
 
         // tranform corresponding JSXElements if any html element imports were found
         if (Object.keys(importedTags).length) {
