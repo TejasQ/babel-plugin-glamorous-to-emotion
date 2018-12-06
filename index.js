@@ -363,7 +363,7 @@ module.exports = function(babel) {
         const useJsxPragma = () => {
           if (!imports["@emotion/core"]) imports["@emotion/core"] = {};
           if (!imports["@emotion/core"].jsx) {
-            // TODO: add comment with jsx pragma (use specifier)
+            t.addComment(path.parent, "leading", "* @jsx jsx ");
             const specifier = t.importSpecifier(t.identifier("jsx"), createUniqueIdentifier("jsx"));
             imports["@emotion/core"].jsx = specifier;
           }
