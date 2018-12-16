@@ -435,9 +435,16 @@ module.exports = function(babel) {
           );
         }
 
+        const preactLibs = {
+          "@emotion/styled": "@emotion/preact-styled",
+        };
+
         // if we used any emotion imports, we add them before the glamorous import path
-        Object.entries(imports).forEach(([lib, libImports]) => {
-          path.insertBefore(t.importDeclaration(Object.values(libImports), t.stringLiteral(lib)));
+        Object.entries(imports).forEach(([rawLibName, libImports]) => {
+          const libName = (opts.preact && preactLibs[rawLibName]) || rawLibName;
+          path.insertBefore(
+            t.importDeclaration(Object.values(libImports), t.stringLiteral(libName))
+          );
         });
 
         path.remove();
