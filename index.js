@@ -18,6 +18,12 @@ const validElementNames = new Set([
   ...htmlElementAttributes.elements.svg,
 ]);
 
+const MODES = {
+  withJsxPragma: "withJsxPragma",
+  withBabelPlugin: "withBabelPlugin",
+  className: "className",
+};
+
 module.exports = function(babel) {
   const {types: t} = babel;
 
@@ -126,14 +132,7 @@ module.exports = function(babel) {
   };
 
   // transform <glamorous.Div css={styles} width={100}/> to <div css={{...styles, width: 100}}/>
-  const transformJSXAttributes = ({
-    tagName,
-    jsxAttrs,
-    withJsxPragma,
-    getCssFn,
-    getCxFn,
-    useJsxPragma,
-  }) => {
+  const transformJSXAttributes = ({tagName, jsxAttrs, mode, getCssFn, getCxFn, useJsxPragma}) => {
     if (!jsxAttrs) return [];
     const stylesArguments = [];
     let classNameAttr = null;
@@ -158,8 +157,8 @@ module.exports = function(babel) {
         } else {
           stylesArguments.unshift(...value.expression.properties);
         }
-        if (withJsxPragma) useJsxPragma();
-        return withJsxPragma;
+        if (mode === MODES.withJsxPragma) useJsxPragma();
+        return mode !== MODES.className;
       } else if (jsxKey.name === "className") {
         classNameAttr = attr;
       } else if (jsxKey.name === "innerRef") {
@@ -189,7 +188,7 @@ module.exports = function(babel) {
 
     if (stylesArguments.length > 0) {
       // if something is spread onto the element, this spread may contain a css prop
-      if (withJsxPragma && spreadsAttrs.length) {
+      if (mode !== MODES.className && spreadsAttrs.length) {
         // we only need to deal with spreads, if `css` is not explicitely set
         if (!originalCssValue) {
           spreadsAttrs.forEach(attr =>
@@ -206,7 +205,7 @@ module.exports = function(babel) {
           ? originalCssValue.expression
           : t.objectExpression(stylesArguments);
 
-      if (withJsxPragma) {
+      if (mode !== MODES.className) {
         // if we allow using the jsx pragma, use <div css={styles}/> syntax
         if (originalCssValue) {
           originalCssValue.expression = stylesObject;
@@ -248,10 +247,7 @@ module.exports = function(babel) {
 
   const glamorousVisitor = {
     // for each reference to an identifier...
-    ReferencedIdentifier(
-      path,
-      {getStyledFn, oldName, withJsxPragma, getCssFn, getCxFn, useJsxPragma}
-    ) {
+    ReferencedIdentifier(path, {getStyledFn, oldName, mode, getCssFn, getCxFn, useJsxPragma}) {
       // skip if the name of the identifier does not correspond to the name of glamorous default import
       if (path.node.name !== oldName) return;
 
@@ -292,7 +288,7 @@ module.exports = function(babel) {
             grandParent.attributes = transformJSXAttributes({
               tagName,
               jsxAttrs: grandParent.attributes,
-              withJsxPragma,
+              mode,
               getCssFn,
               getCxFn,
               useJsxPragma,
@@ -313,6 +309,7 @@ module.exports = function(babel) {
     visitor: {
       ImportDeclaration(path, {opts}) {
         const {value: libName} = path.node.source;
+        const mode = MODES[opts.mode] || MODES.withJsxPragma;
         if (libName !== "glamorous" && libName !== "glamorous.macro") {
           return;
         }
@@ -367,7 +364,7 @@ module.exports = function(babel) {
             path.parentPath.traverse(glamorousVisitor, {
               getStyledFn,
               oldName: s.local.name,
-              withJsxPragma: !opts.withoutJsxPragma,
+              mode,
               getCssFn,
               getCxFn,
               useJsxPragma,
@@ -405,7 +402,7 @@ module.exports = function(babel) {
                 path.node.attributes = transformJSXAttributes({
                   targetTagName,
                   jsxAttrs: path.node.attributes,
-                  withJsxPragma: !opts.withoutJsxPragma,
+                  mode,
                   getCssFn,
                   getCxFn,
                   useJsxPragma,
@@ -445,3 +442,5 @@ module.exports = function(babel) {
     },
   };
 };
+
+module.exports.MODES = MODES;

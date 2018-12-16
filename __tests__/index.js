@@ -1,5 +1,5 @@
 import pluginTester from "babel-plugin-tester";
-import glamorousToEmotion from "../index.js";
+import glamorousToEmotion, {MODES} from "../index.js";
 import path from "path";
 
 const sharedOptions = {
@@ -32,13 +32,29 @@ const sharedOptions = {
 
 pluginTester({
   ...sharedOptions,
-  fixtures: path.join(__dirname, "__fixtures__", "without-jsx-pragma"),
+  fixtures: path.join(__dirname, "__fixtures__", "shared"),
+});
+
+pluginTester({
+  ...sharedOptions,
+  fixtures: path.join(__dirname, "__fixtures__", "mode-withBabelPlugin"),
   pluginOptions: {
-    withoutJsxPragma: true,
+    mode: MODES.withBabelPlugin,
   },
 });
 
 pluginTester({
   ...sharedOptions,
-  fixtures: path.join(__dirname, "__fixtures__", "with-jsx-pragma"),
+  fixtures: path.join(__dirname, "__fixtures__", "mode-withJsxPragma"),
+  pluginOptions: {
+    mode: MODES.withJsxPragma,
+  },
+});
+
+pluginTester({
+  ...sharedOptions,
+  fixtures: path.join(__dirname, "__fixtures__", "mode-className"),
+  pluginOptions: {
+    mode: MODES.className,
+  },
 });

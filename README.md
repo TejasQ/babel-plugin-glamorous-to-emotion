@@ -19,34 +19,50 @@ This will put you fully in emotion-land.
 
 ### Options
 
-You may also pass a `--plugin-options` argument to the `babel-codemod` command. Here's a sample call:
+You may also pass `--plugin-options` to the `babel-codemod` command. Here's a sample call:
 
 ```
-npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{"withoutJsxPragma": true}' src/**/*.js
+npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{"mode": "withBabelPlugin"}' src/**/*.js
 ```
 
-- **`withoutJsxPragma`**
+- **`mode`**
 
-  Use this if you don't want to use the `/** @jsx jsx */` pragma for using the css prop.
+  This plugin offers three modes to convert your glamorous code.
 
-  This means that code like
-
-  ```jsx
-     <glamorous.Div marginTop={5} />
-  ```
-
-  gets translated to
+  Let's compare them based on this glamorous snippet
 
   ```jsx
-    <div className={css({marginTop: 5})} />
+  <glamorous.Div marginTop={5} />
   ```
 
-  Without this option, it will be transformed to
+  #### `mode=withJsxPragma` (default)
+
+  If you can't or don't want to add emotion's [@emotion/babel-preset-css-prop](https://emotion.sh/docs/@emotion/babel-preset-css-prop), you can use emotion via setting the jsx pragma. This will create code like this:
 
   ```jsx
-    <div css={{marginTop: 5}} />
+  /** @jsx jsx */
+  import { jsx } from "@emotion/core";
+
+  <div css={{marginTop: 5}} />
   ```
 
+  #### `mode=withBabelPlugin`
+
+  Use this option if you are able to use the babel plugin. The resulting code will look like this:
+
+  ```jsx
+  <div css={{marginTop: 5}} />
+  ```
+
+  #### `mode=className`
+
+  If neither is an option for you, this codemod allows you to directly set the `className` instead:
+
+  ```jsx
+  import { css } from "@emotion/core";
+
+  <div className={css({marginTop: 5})}>
+  ```
 
 
 - **`preact`**
