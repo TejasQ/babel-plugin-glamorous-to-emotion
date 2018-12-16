@@ -25,7 +25,7 @@ You may also pass `--plugin-options` to the `babel-codemod` command. Here's a sa
 npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{"mode": "withBabelPlugin"}' src/**/*.js
 ```
 
-- **`mode`**
+- #### `mode`
 
   This plugin offers three modes to convert your glamorous code.
 
@@ -35,7 +35,7 @@ npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options gl
   <glamorous.Div marginTop={5} />
   ```
 
-  #### `mode=withJsxPragma` (default)
+  ##### `{"mode": "withJsxPragma"}` (default)
 
   If you can't or don't want to add emotion's [@emotion/babel-preset-css-prop](https://emotion.sh/docs/@emotion/babel-preset-css-prop), you can use emotion via setting the jsx pragma. This will create code like this:
 
@@ -46,7 +46,7 @@ npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options gl
   <div css={{marginTop: 5}} />
   ```
 
-  #### `mode=withBabelPlugin`
+  ##### `{"mode": "withBabelPlugin"}`
 
   Use this option if you are able to use the babel plugin. The resulting code will look like this:
 
@@ -54,18 +54,18 @@ npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options gl
   <div css={{marginTop: 5}} />
   ```
 
-  #### `mode=className`
+  ##### `{"mode": "className"}`
 
   If neither is an option for you, this codemod allows you to directly set the `className` instead:
 
   ```jsx
   import { css } from "@emotion/core";
 
-  <div className={css({marginTop: 5})}>
+  <div className={css({marginTop: 5})} />
   ```
 
 
-- **`preact`**
+- #### `{"preact": true}`
 
   Uses `import styled from "@emotion/preact-styled"` instead of `import styled from "@emotion/styled"`
 
