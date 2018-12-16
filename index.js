@@ -206,7 +206,7 @@ module.exports = function(babel) {
           : t.objectExpression(stylesArguments);
 
       if (mode !== MODES.className) {
-        // if we allow using the jsx pragma, use <div css={styles}/> syntax
+        // if we allow using the css prop, use <div css={styles}/> syntax
         if (originalCssValue) {
           originalCssValue.expression = stylesObject;
         } else {
@@ -215,7 +215,7 @@ module.exports = function(babel) {
           );
         }
       } else {
-        // if we don't allow using the jsx pragma, use <div className={css(styles)}/> syntax
+        // if we don't allow using the css prop, use <div className={css(styles)}/> syntax
         let classNameValue;
         if (!classNameAttr && !spreadsAttrs.length) {
           const cssCall = t.callExpression(getCssFn(), [stylesObject]);
