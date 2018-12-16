@@ -8,14 +8,7 @@
  * It follows the glamorous to emotion migration guide
  * found at https://github.com/paypal/glamorous/blob/master/other/EMOTION_MIGRATION.md
  *
- * You can use it as a babel plugin by adding it to your .babelrc
- * under "plugins", or use it as a one-off codemod by using the
- * babel cli:
- *
- * babel [your-source-dir] --plugins=glamorous-to-emotion --presets=react,etc... --out-dir=[your-source-dir]
- *
- * A demo can be seen at:
- * https://astexplorer.net/#/gist/7bc4771564a12c9f93c4904b3934aa1c/latests
+ * Check out the README for how to use it.
  */
 
 const htmlElementAttributes = require("react-html-attributes");

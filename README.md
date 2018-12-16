@@ -1,8 +1,6 @@
 # 💄 glamorous  → 👩‍🎤 emotion
 This codemod was created to help migrate an existing React or Preact codebase from [glamorous](https://github.com/paypal/glamorous) to [emotion](https://github.com/emotion-js/emotion) in light of [this issue](https://github.com/paypal/glamorous/issues/419) on glamorous.
 
-[Here's a demo](https://astexplorer.net/#/gist/7bc4771564a12c9f93c4904b3934aa1c/latest) of the codemod in action. The upper-left quadrant is glamorous code, the lower-right quadrant is the transformed code.
-
 ## Features
 This codemod follows the [glamorous to emotion migration guide](https://github.com/paypal/glamorous/blob/master/other/EMOTION_MIGRATION.md) on the glamorous repo. Particularly, it rewrites the following:
 
@@ -24,18 +22,36 @@ This will put you fully in emotion-land.
 You may also pass a `--plugin-options` argument to the `babel-codemod` command. Here's a sample call:
 
 ```
-npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{"withBabelPlugin": true}' src/**/*.js
+npx babel-codemod --plugin babel-plugin-glamorous-to-emotion --plugin-options glamorousToEmotion='{"withoutJsxPragma": true}' src/**/*.js
 ```
 
-- **`withBabelPlugin`**
+- **`withoutJsxPragma`**
 
-  Tells the plugin that your emotion setup includes the [emotion-babel-plugin](https://github.com/emotion-js/emotion/tree/master/packages/babel-plugin-emotion). Without this option, `<glamorous.Div marginTop={5}/>` gets translated to `<div className={css({marginTop: 5})}>`.
+  Use this if you don't want to use the `/** @jsx jsx */` pragma for using the css prop.
 
-  If this option is enabled, it will be transformed to `<div css={{marginTop: 5}}>`.
+  This means that code like
+
+  ```jsx
+     <glamorous.Div marginTop={5} />
+  ```
+
+  gets translated to
+
+  ```jsx
+    <div className={css({marginTop: 5})} />
+  ```
+
+  Without this option, it will be transformed to
+
+  ```jsx
+    <div css={{marginTop: 5}} />
+  ```
+
+
 
 - **`preact`**
 
-  Uses `import styled from "preact-emotion"` instead of `import styled from "react-emotion"`
+  Uses `import styled from "@emotion/preact-styled"` instead of `import styled from "@emotion/styled"`
 
 
 ## Contributing
