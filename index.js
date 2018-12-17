@@ -8,14 +8,7 @@
  * It follows the glamorous to emotion migration guide
  * found at https://github.com/paypal/glamorous/blob/master/other/EMOTION_MIGRATION.md
  *
- * You can use it as a babel plugin by adding it to your .babelrc
- * under "plugins", or use it as a one-off codemod by using the
- * babel cli:
- *
- * babel [your-source-dir] --plugins=glamorous-to-emotion --presets=react,etc... --out-dir=[your-source-dir]
- *
- * A demo can be seen at:
- * https://astexplorer.net/#/gist/7bc4771564a12c9f93c4904b3934aa1c/latests
+ * Check out the README for how to use it.
  */
 
 const htmlElementAttributes = require("react-html-attributes");
@@ -24,6 +17,12 @@ const validElementNames = new Set([
   ...htmlElementAttributes.elements.html,
   ...htmlElementAttributes.elements.svg,
 ]);
+
+const MODES = {
+  withJsxPragma: "withJsxPragma",
+  withBabelPlugin: "withBabelPlugin",
+  className: "className",
+};
 
 module.exports = function(babel) {
   const {types: t} = babel;
@@ -116,16 +115,15 @@ module.exports = function(babel) {
   };
 
   // glamorous and emotion treat the css attribute "content" differently.
-  // we need to put it's content inside a string.
+  // we need to put its content inside a string.
   // i.e. turn {content: ""} into {content: '""'}
   const fixContentProp = glamorousFactoryArguments => {
     return glamorousFactoryArguments.map(arg => {
       if (t.isObjectExpression(arg)) {
-        arg.properties = arg.properties.map(
-          prop =>
-            prop.key.name === "content"
-              ? {...prop, value: t.stringLiteral(`"${prop.value.value}"`)}
-              : prop
+        arg.properties = arg.properties.map(prop =>
+          prop.key.name === "content"
+            ? {...prop, value: t.stringLiteral(`"${prop.value.value}"`)}
+            : prop
         );
       }
       // TODO: if `arg` is a function, we might want to inspect its return value
@@ -134,7 +132,7 @@ module.exports = function(babel) {
   };
 
   // transform <glamorous.Div css={styles} width={100}/> to <div css={{...styles, width: 100}}/>
-  const transformJSXAttributes = ({tagName, jsxAttrs, withBabelPlugin, getCssFn, getCxFn}) => {
+  const transformJSXAttributes = ({tagName, jsxAttrs, mode, getCssFn, getCxFn, useJsxPragma}) => {
     if (!jsxAttrs) return [];
     const stylesArguments = [];
     let classNameAttr = null;
@@ -159,7 +157,8 @@ module.exports = function(babel) {
         } else {
           stylesArguments.unshift(...value.expression.properties);
         }
-        return withBabelPlugin;
+        if (mode === MODES.withJsxPragma) useJsxPragma();
+        return mode !== MODES.className;
       } else if (jsxKey.name === "className") {
         classNameAttr = attr;
       } else if (jsxKey.name === "innerRef") {
@@ -189,7 +188,7 @@ module.exports = function(babel) {
 
     if (stylesArguments.length > 0) {
       // if something is spread onto the element, this spread may contain a css prop
-      if (withBabelPlugin && spreadsAttrs.length) {
+      if (mode !== MODES.className && spreadsAttrs.length) {
         // we only need to deal with spreads, if `css` is not explicitely set
         if (!originalCssValue) {
           spreadsAttrs.forEach(attr =>
@@ -206,8 +205,8 @@ module.exports = function(babel) {
           ? originalCssValue.expression
           : t.objectExpression(stylesArguments);
 
-      if (withBabelPlugin) {
-        // if babel plugin is enabled use <div css={styles}/> syntax
+      if (mode !== MODES.className) {
+        // if we allow using the css prop, use <div css={styles}/> syntax
         if (originalCssValue) {
           originalCssValue.expression = stylesObject;
         } else {
@@ -216,7 +215,7 @@ module.exports = function(babel) {
           );
         }
       } else {
-        // if babel plugin is not enabled use <div className={css(styles)}/> syntax
+        // if we don't allow using the css prop, use <div className={css(styles)}/> syntax
         let classNameValue;
         if (!classNameAttr && !spreadsAttrs.length) {
           const cssCall = t.callExpression(getCssFn(), [stylesObject]);
@@ -248,7 +247,7 @@ module.exports = function(babel) {
 
   const glamorousVisitor = {
     // for each reference to an identifier...
-    ReferencedIdentifier(path, {getStyledFn, oldName, withBabelPlugin, getCssFn, getCxFn}) {
+    ReferencedIdentifier(path, {getStyledFn, oldName, mode, getCssFn, getCxFn, useJsxPragma}) {
       // skip if the name of the identifier does not correspond to the name of glamorous default import
       if (path.node.name !== oldName) return;
 
@@ -289,9 +288,10 @@ module.exports = function(babel) {
             grandParent.attributes = transformJSXAttributes({
               tagName,
               jsxAttrs: grandParent.attributes,
-              withBabelPlugin,
+              mode,
               getCssFn,
               getCxFn,
+              useJsxPragma,
             });
           }
           break;
@@ -309,6 +309,7 @@ module.exports = function(babel) {
     visitor: {
       ImportDeclaration(path, {opts}) {
         const {value: libName} = path.node.source;
+        const mode = MODES[opts.mode] || MODES.withJsxPragma;
         if (libName !== "glamorous" && libName !== "glamorous.macro") {
           return;
         }
@@ -317,42 +318,58 @@ module.exports = function(babel) {
         const createUniqueIdentifier = name =>
           path.scope.hasBinding(name) ? path.scope.generateUidIdentifier(name) : t.identifier(name);
 
-        // this object collects all the imports we'll need from "react-emotion"
-        let emotionImports = {};
+        // this object collects all the imports we'll need to add
+        let imports = {};
 
         const getStyledFn = () => {
-          if (!emotionImports["default"]) {
-            emotionImports["default"] = t.importDefaultSpecifier(createUniqueIdentifier("styled"));
+          if (!imports["@emotion/styled"]) {
+            imports["@emotion/styled"] = {
+              default: t.importDefaultSpecifier(createUniqueIdentifier("styled")),
+            };
           }
-          return emotionImports["default"].local;
+          return imports["@emotion/styled"].default.local;
         };
 
         const getCssFn = () => {
-          if (!emotionImports["css"]) {
+          if (!imports["@emotion/core"]) imports["@emotion/core"] = {};
+          if (!imports["@emotion/core"].css) {
             const specifier = t.importSpecifier(t.identifier("css"), createUniqueIdentifier("css"));
-            emotionImports["css"] = specifier;
+            imports["@emotion/core"].css = specifier;
           }
-          return emotionImports["css"].local;
+          return imports["@emotion/core"].css.local;
         };
 
         const getCxFn = () => {
-          if (!emotionImports["cx"]) {
+          if (!imports["emotion"]) imports["emotion"] = {};
+          if (!imports["emotion"].cx) {
             const specifier = t.importSpecifier(t.identifier("cx"), createUniqueIdentifier("cx"));
-            emotionImports["cx"] = specifier;
+            imports["emotion"].cx = specifier;
           }
-          return emotionImports["cx"].local;
+          return imports["emotion"].cx.local;
+        };
+
+        const useJsxPragma = () => {
+          if (!imports["@emotion/core"]) imports["@emotion/core"] = {};
+          if (!imports["@emotion/core"].jsx) {
+            t.addComment(path.parent, "leading", "* @jsx jsx ");
+            const specifier = t.importSpecifier(t.identifier("jsx"), createUniqueIdentifier("jsx"));
+            imports["@emotion/core"].jsx = specifier;
+          }
         };
 
         // only if the default import of glamorous is used, we're gonna apply the transforms
-        path.node.specifiers.filter(s => t.isImportDefaultSpecifier(s)).forEach(s => {
-          path.parentPath.traverse(glamorousVisitor, {
-            getStyledFn,
-            oldName: s.local.name,
-            withBabelPlugin: opts.withBabelPlugin,
-            getCssFn,
-            getCxFn,
+        path.node.specifiers
+          .filter(s => t.isImportDefaultSpecifier(s))
+          .forEach(s => {
+            path.parentPath.traverse(glamorousVisitor, {
+              getStyledFn,
+              oldName: s.local.name,
+              mode,
+              getCssFn,
+              getCxFn,
+              useJsxPragma,
+            });
           });
-        });
 
         /*
         `import {Span, Div as StyledDiv} from "glamorous"`
@@ -360,14 +377,16 @@ module.exports = function(babel) {
         */
         const importedTags = {};
 
-        path.node.specifiers.filter(s => t.isImportSpecifier(s)).forEach(({imported, local}) => {
-          const tagName = imported.name.toLowerCase();
-          if (validElementNames.has(tagName)) {
-            importedTags[local.name] = tagName;
-          }
-        });
+        path.node.specifiers
+          .filter(s => t.isImportSpecifier(s))
+          .forEach(({imported, local}) => {
+            const tagName = imported.name.toLowerCase();
+            if (validElementNames.has(tagName)) {
+              importedTags[local.name] = tagName;
+            }
+          });
 
-        // tranform corresponding JSXElements if any html element imports were found
+        // transform corresponding JSXElements if any html element imports were found
         if (Object.keys(importedTags).length) {
           path.parentPath.traverse({
             "JSXOpeningElement|JSXClosingElement": path => {
@@ -383,9 +402,10 @@ module.exports = function(babel) {
                 path.node.attributes = transformJSXAttributes({
                   targetTagName,
                   jsxAttrs: path.node.attributes,
-                  withBabelPlugin: opts.withBabelPlugin,
+                  mode,
                   getCssFn,
                   getCxFn,
+                  useJsxPragma,
                 });
               }
             },
@@ -405,18 +425,22 @@ module.exports = function(babel) {
           );
         }
 
-        // if we needed something from the emotion lib, we need to add the import
-        if (Object.keys(emotionImports).length) {
+        const preactLibs = {
+          "@emotion/styled": "@emotion/preact-styled",
+        };
+
+        // if we used any emotion imports, we add them before the glamorous import path
+        Object.entries(imports).forEach(([rawLibName, libImports]) => {
+          const libName = (opts.preact && preactLibs[rawLibName]) || rawLibName;
           path.insertBefore(
-            t.importDeclaration(
-              Object.values(emotionImports),
-              t.stringLiteral(opts.preact ? "preact-emotion" : "react-emotion")
-            )
+            t.importDeclaration(Object.values(libImports), t.stringLiteral(libName))
           );
-        }
+        });
 
         path.remove();
       },
     },
   };
 };
+
+module.exports.MODES = MODES;
