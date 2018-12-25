@@ -167,6 +167,7 @@ module.exports = function(babel) {
       } else {
         // ignore event handlers
         if (jsxKey.name.match(/on[A-Z]/)) return true;
+        if (jsxKey.name === "key") return true;
 
         // ignore generic attributes like 'id'
         if (htmlElementAttributes["*"].includes(jsxKey.name)) return true;

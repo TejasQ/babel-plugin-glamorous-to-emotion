@@ -47,3 +47,7 @@ const GDot14 = props => <span css={{
 }}>content</span>;
 
 const GDot15 = props => <other.StyledSpan marginTop={5} />;
+
+const GDot16 = props => <div key="key" css={{
+  marginTop: 5
+}} />;
