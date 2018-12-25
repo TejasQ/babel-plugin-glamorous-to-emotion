@@ -188,18 +188,6 @@ module.exports = function(babel) {
     });
 
     if (stylesArguments.length > 0) {
-      // if something is spread onto the element, this spread may contain a css prop
-      if (mode !== MODES.className && spreadsAttrs.length) {
-        // we only need to deal with spreads, if `css` is not explicitely set
-        if (!originalCssValue) {
-          spreadsAttrs.forEach(attr =>
-            stylesArguments.unshift(
-              t.spreadElement(t.memberExpression(attr.argument, t.identifier("css")))
-            )
-          );
-        }
-      }
-
       // if the css property was the only object, we don't need to use it's spreaded version
       const stylesObject =
         originalCssValue && stylesArguments.length === 1

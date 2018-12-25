@@ -30,7 +30,7 @@ const GDot9 = props => <span css={styles} {...props} />;
 
 const GDot10 = props => <span {...props} css={styles} />;
 
-const GDot11 = props => <span {...props} css={{ ...props.css,
+const GDot11 = props => <span {...props} css={{
   marginTop: 5
 }} />;
 
