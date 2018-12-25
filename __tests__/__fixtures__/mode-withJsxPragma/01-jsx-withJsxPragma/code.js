@@ -15,3 +15,4 @@ const GDot12 = props => <g.Div marginTop={5} innerRef={handler}/>;
 const GDot13 = props => <Div marginTop={5}/>;
 const GDot14 = props => <StyledSpan marginTop={5}>content</StyledSpan>;
 const GDot15 = props => <other.StyledSpan marginTop={5}/>;
+const GDot16 = props => <g.Div key="key" css={{marginTop: 5}}/>;
